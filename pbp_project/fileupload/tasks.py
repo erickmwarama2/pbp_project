@@ -2,7 +2,7 @@ from .models import User
 from celery import shared_task
 from django.core.serializers import serialize
 from .serializers import UserSerializer
-import json
+import uuid
 
 
 @shared_task
@@ -35,6 +35,7 @@ def upload_users_json(data):
     users = []
 
     for obj in data:
+        obj["finger_print_signature"] = str(uuid.uuid1())
         user = User(**obj)
         users.append(user)
 
@@ -62,7 +63,7 @@ def upload_users(data):
         country = read_values[5]
         phone_number = read_values[6]
         email = read_values[7]
-        finger_print_signature = "hhhhhhofe"
+        finger_print_signature = str(uuid.uuid1())
 
         user = User(
             first_name=first_name,

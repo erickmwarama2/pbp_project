@@ -1,9 +1,8 @@
 from django.test import TestCase, RequestFactory
 from .models import User
 from .views import UploadViewSet
-
-# from .serializers import UserSerializer
 from django.forms.models import model_to_dict
+import uuid
 
 
 class UserUnitTestCase(TestCase):
@@ -19,7 +18,7 @@ class UserUnitTestCase(TestCase):
             country="country",
             phone_number="00100",
             email="user@email.com",
-            finger_print_signature="nfoerere",
+            finger_print_signature=str(uuid.uuid1()),
         )
         self.user.save()
 

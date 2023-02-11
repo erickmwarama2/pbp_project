@@ -10,7 +10,7 @@ class User(models.Model):
     country = models.CharField(max_length=30)
     phone_number = models.CharField(max_length=20)
     email = models.EmailField(max_length=50)
-    finger_print_signature = models.CharField(max_length=30)
+    finger_print_signature = models.CharField(max_length=35)
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}, {self.national_id}, {self.birth_date} {self.address}, {self.email}"
