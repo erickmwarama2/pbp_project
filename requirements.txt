@@ -1,0 +1,13 @@
+celery==5.2.7
+Django==4.0
+django-filter==22.1
+django-money==3.0.0
+djangorestframework==3.14.0
+flake8==6.0.0
+pyflakes==3.0.1
+redis==4.5.1
+psycopg2-binary
+django-celery-beat
+django-celery-results
+python-decouple
+flake8-black
