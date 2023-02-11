@@ -1,0 +1,3 @@
+- repo: https://github.com/erickmwarama2/pbp_project
+  hooks:
+    - id: flake8
