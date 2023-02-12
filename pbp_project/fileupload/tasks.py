@@ -6,17 +6,43 @@ import uuid
 
 
 @shared_task
-def get_users(pk=None, search=None, order=None):
+def get_users(
+    pk=None,
+    first_name=None,
+    last_name=None,
+    country=None,
+    national_id=None,
+    email=None,
+    phone_number=None,
+    birth_date=None,
+):
     response = None
 
-    if search is None:
-        search = {}
-    if order is None:
-        order = {}
-
     if pk is None:
-        response = User.objects.all().filter(**search).order_by(**order)
-        serializer = UserSerializer(response, many=True)
+        query_set = User.objects.all()
+
+        if first_name is not None:
+            query_set = query_set.filter(first_name=first_name)
+
+        if last_name is not None:
+            query_set = query_set.filter(last_name=last_name)
+
+        if country is not None:
+            query_set = query_set.filter(country=country)
+
+        if email is not None:
+            query_set = query_set.filter(email=email)
+
+        if national_id is not None:
+            query_set = query_set.filter(national_id=national_id)
+
+        if phone_number is not None:
+            query_set = query_set.filter(phone_number=phone_number)
+
+        if birth_date is not None:
+            query_set = query_set.filter(birth_date=birth_date)
+
+        serializer = UserSerializer(query_set, many=True)
     else:
         response = User.objects.get(pk=pk)
         serializer = UserSerializer(response)

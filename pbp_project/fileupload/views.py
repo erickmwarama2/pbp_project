@@ -10,9 +10,23 @@ class UploadViewSet(ViewSet):
     serializer_class = UploadSerializer
 
     def list(self, request):
+        first_name = request.query_params.get("first_name", None)
+        last_name = request.query_params.get("last_name", None)
+        national_id = request.query_params.get("national_id", None)
+        country = request.query_params.get("country", None)
+        birth_date = request.query_params.get("birth_date", None)
+        phone_number = request.query_params.get("phone_number", None)
+        email = request.query_params.get("email", None)
+
         users = get_users.delay(
-            request.query_params.get("search", None),
-            request.query_params.get("order", None),
+            pk=None,
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
+            phone_number=phone_number,
+            national_id=national_id,
+            country=country,
+            birth_date=birth_date,
         )
         response = users.get(propagate=True)
         return JsonResponse(response, safe=False)
