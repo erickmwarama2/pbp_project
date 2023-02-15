@@ -1,16 +1,18 @@
 from django.db import models
 
 
-class User(models.Model):
-    first_name = models.CharField(max_length=30)
-    last_name = models.CharField(max_length=30)
-    national_id = models.CharField(max_length=30)
-    birth_date = models.DateField()
-    address = models.CharField(max_length=30)
-    country = models.CharField(max_length=30)
-    phone_number = models.CharField(max_length=20)
-    email = models.EmailField(max_length=50)
+class Customer(models.Model):
+    first_name = models.CharField(max_length=30, db_index=True)
+    last_name = models.CharField(max_length=30, db_index=True)
+    national_id = models.CharField(max_length=30, db_index=True, unique=True)
+    birth_date = models.DateField(db_index=True)
+    address = models.CharField(max_length=30, db_index=True)
+    country = models.CharField(max_length=30, db_index=True)
+    phone_number = models.CharField(max_length=20, db_index=True, unique=True)
+    email = models.EmailField(max_length=50, db_index=True, unique=True)
     finger_print_signature = models.CharField(max_length=50)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name}, {self.national_id}, {self.birth_date} {self.address}, {self.email}"
+        return f"Name: {self.first_name} {self.last_name}, ID: {self.national_id}"
