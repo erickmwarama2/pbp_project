@@ -1,2 +1,2 @@
-./pbp_project/fileupload/__pycache__
-./pbp_project/fileupload/migrations/__pycache__
+./pbp_project/fileupload/__pycache__/*
+./pbp_project/fileupload/migrations/__pycache__/*
