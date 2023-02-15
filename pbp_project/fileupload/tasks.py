@@ -3,6 +3,7 @@ from celery import shared_task
 from django.core.serializers import serialize
 from .serializers import UserSerializer
 import uuid
+from .views import CreateCustomerException
 
 
 @shared_task
@@ -67,8 +68,10 @@ def upload_users_json(data):
 
     try:
         User.objects.bulk_create(users)
-    except Exception:
-        raise Exception("Exception occured while inserting users")
+    except Exception as e:
+        raise CreateCustomerException(
+            f"Exception occured while inserting users: \n {str(e)}"
+        )
 
     return True
 
@@ -106,7 +109,9 @@ def upload_users(data):
 
     try:
         User.objects.bulk_create(users)
-    except Exception:
-        raise Exception("Exception occured while inserting users")
+    except Exception as e:
+        raise CreateCustomerException(
+            f"Exception occured while inserting users : \n {str(e)}"
+        )
 
     return True

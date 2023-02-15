@@ -53,8 +53,8 @@ class UploadViewSet(ViewSet):
                     res = upload_users.delay(file_data)
                 else:
                     res = upload_users.delay(req_body)
-            except Exception:
-                raise Exception("Exception occured while fetching users")
+            except CreateCustomerException as ce:
+                raise ce
         else:
             res = upload_users_json.delay(req_data)
 
@@ -63,4 +63,9 @@ class UploadViewSet(ViewSet):
         if res.successful():
             return JsonResponse({"message": "users succesfully created in the db"})
         else:
-            raise Exception("Error occured while creating users")
+            raise CreateCustomerException("Error occured while creating users")
+
+
+class CreateCustomerException(Exception):
+    def __init__(self, message):
+        super().__init__(message)
