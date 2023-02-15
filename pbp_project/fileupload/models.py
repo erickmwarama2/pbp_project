@@ -1,24 +1,40 @@
-from django.db import models
+from django.db import models, transaction
 import enum
 import datetime
+import os
+import csv
+import uuid
 
 
-class FileUpload(models.Model):
-    class UploadStatus(enum.Enum):
+class FileUploadModel(models.Model):
+    class UploadStatus(models.IntegerChoices):
         PENDING = 1
         PROCESSED = 2
         FAILED = 3
 
-    file_path = models.CharField()
-    uploaded_by = models.ForeignKey("auth.User")
+    file_path = models.CharField(max_length=255)
+    uploaded_by = models.ForeignKey("auth.User", on_delete=models.SET_NULL, null=True)
     upload_date = models.DateTimeField(auto_now_add=True)
     upload_status = models.IntegerField(
-        choices=UploadStatus, default=UploadStatus.PENDING
+        choices=UploadStatus.choices, default=UploadStatus.PENDING
     )
     processing_message = models.TextField(blank=True, null=True)
     num_records = models.PositiveIntegerField()
     start_date_time = models.DateTimeField(null=True)
     end_date_time = models.DateTimeField(null=True)
+
+    @property
+    def filename(self):
+        return os.path.basename(self.filename)
+
+    def create_from_stream(self, file, user):
+        filepath = self.generate_filename()
+
+        with open(filepath, "wb+") as dest:
+            for chunk in file.chunks():
+                dest.write(chunk)
+
+        return FileUploadModel.objects.create(filepath=filepath, uploaded_by=user.id)
 
     def mark_processed(self, num_records):
         self.upload_status = self.UploadStatus.PROCESSED
@@ -34,13 +50,38 @@ class FileUpload(models.Model):
 
     def upload(self):
         self.start_date_time = datetime.datetime.now()
+        customers = []
+        num_records = 0
 
         try:
-            pass
+            with open(self.filename, "rb") as f:
+                decoded_file = f.read().decode("utf-8").splitlines()
+                reader = csv.DictReader(decoded_file)
+
+                for row in reader:
+                    customer = Customer(
+                        first_name=row.get("first_name", None),
+                        last_name=row.get("last_name", None),
+                        national_id=row.get("national_id", None),
+                        birth_date=row.get("birth_date", None),
+                        address=row.get("address", None),
+                        country=row.get("country", None),
+                        phone_number=row.get("phone_number", None),
+                        email=row.get("email", None),
+                        finger_print_signature=str(uuid.uuid1()),
+                    )
+                    customers.append(customer)
+                    num_records += 1
+
+                with transaction.atomic():
+                    Customer.objects.bulk_create(customers, ignore_conflicts=True)
         except Exception as e:
             self.mark_failed(str(e))
+            raise CreateCustomerException(
+                f"Error occured while creating customer records: \n {str(e)}"
+            )
         else:
-            self.mark_processed(0)
+            self.mark_processed(num_records)
 
 
 class Customer(models.Model):
@@ -69,10 +110,22 @@ class Customer(models.Model):
         ]
 
         constraints = [
-            models.UniqueConstraint(fields=["national_id"]),
-            models.UniqueConstraint(fields=["phone_number"]),
-            models.UniqueConstraint(fields=["email"]),
+            models.UniqueConstraint(fields=["national_id"], name="unique_national_id"),
+            models.UniqueConstraint(
+                fields=["phone_number"], name="unique_phone_number"
+            ),
+            models.UniqueConstraint(fields=["email"], name="unique_email"),
         ]
 
     def __str__(self):
         return f"Name: {self.first_name} {self.last_name}, ID: {self.national_id}"
+
+
+class CreateCustomerException(Exception):
+    def __init__(self, message):
+        super().__init__(message)
+
+
+class FileUploadException(Exception):
+    def __init__(self, message):
+        super().__init__(message)

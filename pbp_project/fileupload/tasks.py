@@ -1,13 +1,27 @@
-from .models import User
+from .models import Customer, FileUploadModel
 from celery import shared_task
+from celery.signals import task_postrun
 from django.core.serializers import serialize
-from .serializers import UserSerializer
+from .serializers import CustomerSerializer
 import uuid
-from .views import CreateCustomerException
+from .models import CreateCustomerException, FileUploadException
+import csv
 
 
 @shared_task
-def get_users(
+def create_file_upload(file, user):
+    fileupload = FileUploadModel.objects.create_from_stream(file, user)
+    process_fileupload.delay(fileupload.id)
+
+
+@shared_task
+def process_fileupload(upload_id):
+    upload = FileUploadModel.objects.get(id=upload_id)
+    upload.upload()
+
+
+@shared_task
+def get_customers(
     pk=None,
     first_name=None,
     last_name=None,
@@ -20,7 +34,7 @@ def get_users(
     response = None
 
     if pk is None:
-        query_set = User.objects.all()
+        query_set = Customer.objects.all()
 
         if first_name is not None:
             query_set = query_set.filter(first_name=first_name)
@@ -43,42 +57,42 @@ def get_users(
         if birth_date is not None:
             query_set = query_set.filter(birth_date=birth_date)
 
-        serializer = UserSerializer(query_set, many=True)
+        serializer = CustomerSerializer(query_set, many=True)
     else:
-        response = User.objects.get(pk=pk)
-        serializer = UserSerializer(response)
+        response = Customer.objects.get(pk=pk)
+        serializer = CustomerSerializer(response)
 
     return serializer.data
 
 
 @shared_task
-def update_user(pk, user):
-    User.objects.update(pk, user)
+def update_customer(pk, customer):
+    Customer.objects.update(pk, customer)
     return True
 
 
 @shared_task
-def upload_users_json(data):
-    users = []
+def upload_customers_json(data):
+    customers = []
 
     for obj in data:
         obj["finger_print_signature"] = str(uuid.uuid1())
-        user = User(**obj)
-        users.append(user)
+        customer = Customer(**obj)
+        customers.append(customer)
 
     try:
-        User.objects.bulk_create(users)
+        Customer.objects.bulk_create(customers)
     except Exception as e:
         raise CreateCustomerException(
-            f"Exception occured while inserting users: \n {str(e)}"
+            f"Exception occured while inserting customers: \n {str(e)}"
         )
 
     return True
 
 
 @shared_task
-def upload_users(data):
-    users = []
+def upload_customers(data):
+    customers = []
     for text in data:
         if text == "":
             continue
@@ -94,7 +108,7 @@ def upload_users(data):
         email = read_values[7]
         finger_print_signature = str(uuid.uuid1())
 
-        user = User(
+        customer = Customer(
             first_name=first_name,
             last_name=last_name,
             national_id=national_id,
@@ -105,13 +119,13 @@ def upload_users(data):
             email=email,
             finger_print_signature=finger_print_signature,
         )
-        users.append(user)
+        customers.append(customer)
 
     try:
-        User.objects.bulk_create(users)
+        Customer.objects.bulk_create(customers)
     except Exception as e:
         raise CreateCustomerException(
-            f"Exception occured while inserting users : \n {str(e)}"
+            f"Exception occured while inserting customers : \n {str(e)}"
         )
 
     return True

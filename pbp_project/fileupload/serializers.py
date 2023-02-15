@@ -1,5 +1,5 @@
 from rest_framework.serializers import FileField, ModelSerializer
-from .models import User
+from .models import Customer, FileUploadModel
 
 
 class UploadSerializer(ModelSerializer):
@@ -7,10 +7,10 @@ class UploadSerializer(ModelSerializer):
 
     class Meta:
         fields = ["file"]
-        model = User
+        model = FileUploadModel
 
 
-class UserSerializer(ModelSerializer):
+class CustomerSerializer(ModelSerializer):
     class Meta:
-        model = User
+        model = Customer
         fields = "__all__"
