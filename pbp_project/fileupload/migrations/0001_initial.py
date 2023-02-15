@@ -11,6 +11,19 @@ class Migration(migrations.Migration):
         ("auth", "0012_alter_user_first_name_max_length"),
     ]
 
+    def generate_superuser(apps, schema_editor):
+        from django.contrib.auth.models import User
+
+        DJANGO_SU_NAME = "erick"
+        DJANGO_SU_EMAIL = "erick@gmail.com"
+        DJANGO_SU_PASSWORD = "erick"
+
+        superuser = User.objects.create_superuser(
+            username=DJANGO_SU_NAME, email=DJANGO_SU_EMAIL, password=DJANGO_SU_PASSWORD
+        )
+
+        superuser.save()
+
     operations = [
         migrations.CreateModel(
             name="Customer",
@@ -134,4 +147,5 @@ class Migration(migrations.Migration):
             model_name="customer",
             constraint=models.UniqueConstraint(fields=("email",), name="unique_email"),
         ),
+        migrations.RunPython(generate_superuser),
     ]

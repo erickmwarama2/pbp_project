@@ -19,6 +19,6 @@ from django.urls import path, include
 from rest_framework import routers
 
 router = routers.DefaultRouter()
-router.register(r"users", UploadViewSet, basename="users")
+router.register(r"customers", UploadViewSet, basename="customers")
 
 urlpatterns = [path("admin/", admin.site.urls), path("", include(router.urls))]
