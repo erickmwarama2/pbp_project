@@ -5,6 +5,8 @@ services:
     build: .
     command: sh -c "python manage.py makemigrations &&
                     python manage.py migrate &&
+                    python manage.py createsuperuser --username erick --email erick@gmail.com &&
+                    python manage.py drf_create_token erick &&
                     celery -A pbp_project worker --loglevel=info --detach &&
                     python manage.py runserver 0.0.0.0:8000"
     ports:
@@ -15,6 +17,7 @@ services:
       "on-failure"
     depends_on:
       - db
+      - redis
 
   db:
     image: postgres:13
