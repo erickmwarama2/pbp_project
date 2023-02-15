@@ -3,6 +3,7 @@ from .models import User
 from .views import UploadViewSet
 from django.forms.models import model_to_dict
 import uuid
+from django.urls import resolve
 
 
 class UserUnitTestCase(TestCase):
@@ -29,8 +30,11 @@ class UserUnitTestCase(TestCase):
 
     def test_create_user(self):
         users = [model_to_dict(self.user)]
+        match = resolve("/users")
 
-        request = self.factory.post("/users", users, content_type="application/json")
+        request = self.factory.post(
+            match.url_name, users, content_type="application/json"
+        )
 
         response = UploadViewSet.as_view({"post": "create"})(request)
 
@@ -38,7 +42,8 @@ class UserUnitTestCase(TestCase):
 
     def test_get_user(self):
         # test GET /users/:id endpoint
-        request = self.factory.get("/users")
+        match = resolve("/users")
+        request = self.factory.get(match.url_name)
 
         response = UploadViewSet.as_view({"get": "retrieve"})(request, self.user.id)
         self.assertEqual(response.status_code, 200)
