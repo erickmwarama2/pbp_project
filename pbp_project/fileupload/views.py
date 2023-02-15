@@ -1,5 +1,6 @@
 from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 from django.http import JsonResponse
 from .serializers import UploadSerializer
 from .tasks import (
@@ -8,12 +9,14 @@ from .tasks import (
     update_customer,
     upload_customers_json,
     create_file_upload,
+    create_json_upload,
 )
 from .models import CreateCustomerException, FileUploadException
 
 
 class UploadViewSet(ViewSet):
     serializer_class = UploadSerializer
+    permission_classes = (IsAuthenticated,)
 
     def list(self, request):
         first_name = request.query_params.get("first_name", None)
@@ -65,7 +68,10 @@ class UploadViewSet(ViewSet):
                 except CreateCustomerException as ce:
                     raise ce
         else:
-            res = upload_customers_json.delay(req_data)
+            try:
+                res = create_json_upload.delay(request.user, req_data)
+            except CreateCustomerException as ce:
+                raise ce
 
         res.get(propagate=True)
 

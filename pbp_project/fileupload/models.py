@@ -4,6 +4,7 @@ import datetime
 import os
 import csv
 import uuid
+import json
 
 
 class FileUploadModel(models.Model):
@@ -27,12 +28,20 @@ class FileUploadModel(models.Model):
     def filename(self):
         return os.path.basename(self.filename)
 
-    def create_from_stream(self, file, user):
-        filepath = self.generate_filename()
+    def create_from_stream(self, user, file=None, body=None):
+        if file is not None:
+            filepath = self.generate_filename()
+            self.filename = filepath
 
-        with open(filepath, "wb+") as dest:
-            for chunk in file.chunks():
-                dest.write(chunk)
+            with open(filepath, "wb+") as dest:
+                for chunk in file.chunks():
+                    dest.write(chunk)
+        else:
+            filepath = "/tmp/upload_users.json"
+            self.filename = filepath
+            with open(filepath, "wb+") as dest:
+                for obj in body:
+                    dest.write(obj)
 
         return FileUploadModel.objects.create(filepath=filepath, uploaded_by=user.id)
 
@@ -47,6 +56,40 @@ class FileUploadModel(models.Model):
         self.upload_status = self.UploadStatus.FAILED
         self.processing_message = message
         self.save()
+
+    def upload_json(self, body):
+        self.start_date_time = datetime.datetime.now()
+        customers = []
+        num_records = 0
+
+        try:
+            with open(self.filename, "rb") as f:
+                decoded_file = json.load(f)
+
+                for row in decoded_file:
+                    customer = Customer(
+                        first_name=row.get("first_name", None),
+                        last_name=row.get("last_name", None),
+                        national_id=row.get("national_id", None),
+                        birth_date=row.get("birth_date", None),
+                        address=row.get("address", None),
+                        country=row.get("country", None),
+                        phone_number=row.get("phone_number", None),
+                        email=row.get("email", None),
+                        finger_print_signature=str(uuid.uuid1()),
+                    )
+                    customers.append(customer)
+                    num_records += 1
+
+                with transaction.atomic():
+                    Customer.objects.bulk_create(customers, ignore_conflicts=True)
+        except Exception as e:
+            self.mark_failed(str(e))
+            raise CreateCustomerException(
+                f"Error occured while creating customer records: \n {str(e)}"
+            )
+        else:
+            self.mark_processed(num_records)
 
     def upload(self):
         self.start_date_time = datetime.datetime.now()

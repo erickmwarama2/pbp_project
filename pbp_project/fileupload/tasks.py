@@ -10,8 +10,20 @@ import csv
 
 @shared_task
 def create_file_upload(file, user):
-    fileupload = FileUploadModel.objects.create_from_stream(file, user)
+    fileupload = FileUploadModel.objects.create_from_stream(user, file)
     process_fileupload.delay(fileupload.id)
+
+
+@shared_task
+def create_json_upload(body, user):
+    fileupload = FileUploadModel.objects.create(user, None, body)
+    process_file_upload_json.delay(fileupload.id)
+
+
+@shared_task
+def process_file_upload_json(upload_id):
+    upload = FileUploadModel.objects.get(id=upload_id)
+    upload.upload_json()
 
 
 @shared_task
