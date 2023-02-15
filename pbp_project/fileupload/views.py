@@ -2,8 +2,14 @@ from rest_framework.viewsets import ViewSet
 from rest_framework.response import Response
 from django.http import JsonResponse
 from .serializers import UploadSerializer
-from .tasks import upload_users, get_users, update_user, upload_users_json
-import json
+from .tasks import (
+    upload_customers,
+    get_customers,
+    update_customer,
+    upload_customers_json,
+    create_file_upload,
+)
+from .models import CreateCustomerException, FileUploadException
 
 
 class UploadViewSet(ViewSet):
@@ -18,7 +24,7 @@ class UploadViewSet(ViewSet):
         phone_number = request.query_params.get("phone_number", None)
         email = request.query_params.get("email", None)
 
-        users = get_users.delay(
+        customers = get_customers.delay(
             pk=None,
             first_name=first_name,
             last_name=last_name,
@@ -28,44 +34,42 @@ class UploadViewSet(ViewSet):
             country=country,
             birth_date=birth_date,
         )
-        response = users.get(propagate=True)
+        response = customers.get(propagate=True)
         return JsonResponse(response, safe=False)
 
     def retrieve(self, request, pk=None):
-        user = get_users.delay(pk)
-        response = user.get(propagate=True)
+        customer = get_customers.delay(pk)
+        response = customer.get(propagate=True)
         return JsonResponse(response)
 
     def update(self, request, pk=None):
-        res = update_user.delay(pk, request.body)
+        res = update_customer.delay(pk, request.body)
         return res.get(propagate=True)
 
     def create(self, request):
         file_uploaded = None
         req_body = request.body
         req_data = request.data
+
         if "file" in request.FILES:
             file_uploaded = request.FILES["file"]
             content_type = file_uploaded.content_type
-            try:
-                if content_type == "text/csv":
-                    file_data = file_uploaded.read().decode("utf-8").strip().split("\n")
-                    res = upload_users.delay(file_data)
-                else:
-                    res = upload_users.delay(req_body)
-            except CreateCustomerException as ce:
-                raise ce
+            if content_type == "text/csv":
+                try:
+                    create_file_upload.delay(file_uploaded, request.user)
+                except FileUploadException as fe:
+                    raise fe
+            else:
+                try:
+                    res = upload_customers.delay(req_body)
+                except CreateCustomerException as ce:
+                    raise ce
         else:
-            res = upload_users_json.delay(req_data)
+            res = upload_customers_json.delay(req_data)
 
         res.get(propagate=True)
 
         if res.successful():
-            return JsonResponse({"message": "users succesfully created in the db"})
+            return JsonResponse({"message": "customers succesfully created in the db"})
         else:
-            raise CreateCustomerException("Error occured while creating users")
-
-
-class CreateCustomerException(Exception):
-    def __init__(self, message):
-        super().__init__(message)
+            raise CreateCustomerException("Error occured while creating customers")
