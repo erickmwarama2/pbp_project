@@ -1,10 +1,9 @@
-from django.test import TestCase, RequestFactory
+from django.test import TestCase, RequestFactory, Client
 from .models import Customer
 from .views import UploadViewSet
 from django.forms.models import model_to_dict
 import uuid
 from django.urls import resolve
-from django.contrib.auth.models import AnonymousUser, User
 
 
 class UserUnitTestCase(TestCase):
@@ -22,6 +21,8 @@ class UserUnitTestCase(TestCase):
             email="user@email.com",
             finger_print_signature=str(uuid.uuid1()),
         )
+        self.client = Client()
+        self.client.login(username="erick", password="erick")
         self.customer.save()
 
     def test_user_inserted(self):
@@ -33,21 +34,14 @@ class UserUnitTestCase(TestCase):
         customers = [model_to_dict(self.customer)]
         match = resolve("/customers/")
 
-        headers = {"content-type": "application/json"}
-        request = self.factory.post(match.url_name, customers, **headers)
-        request.user = AnonymousUser()
-
-        response = UploadViewSet.as_view({"post": "create"})(request)
-
+        response = self.client.post(
+            match.url_name, customers, content_type="application/json"
+        )
         self.assertEqual(response.status_code, 200)
 
     def test_get_user(self):
         # test GET /customers/:id endpoint
-        match = resolve("/customers/")
+        match = resolve("/customers/" + self.customer.id)
 
-        headers = {"content-type": "application/json"}
-        request = self.factory.get(match.url_name, **headers)
-        request.user = AnonymousUser()
-
-        response = UploadViewSet.as_view({"get": "retrieve"})(request, self.customer.id)
+        response = self.client.get(match.url_name)
         self.assertEqual(response.status_code, 200)
