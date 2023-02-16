@@ -12,6 +12,7 @@ from .tasks import (
     create_json_upload,
 )
 from .models import CreateCustomerException, FileUploadException
+import json
 
 
 class UploadViewSet(ViewSet):
@@ -59,7 +60,13 @@ class UploadViewSet(ViewSet):
             content_type = file_uploaded.content_type
             if content_type == "text/csv":
                 try:
-                    create_file_upload.delay(file_uploaded, request.user)
+                    filepath = "/tmp/upload_users.csv"
+
+                    with open(filepath, "wb+") as dest:
+                        for chunk in file_uploaded.chunks():
+                            dest.write(chunk)
+
+                    res = create_file_upload.delay(filepath, request.user.id)
                 except FileUploadException as fe:
                     raise fe
             else:
@@ -69,7 +76,12 @@ class UploadViewSet(ViewSet):
                     raise ce
         else:
             try:
-                res = create_json_upload.delay(request.user, req_data)
+                filepath = "/tmp/upload_users.json"
+                with open(filepath, "w+") as dest:
+                    for obj in req_data:
+                        dest.write(json.dumps(obj))
+
+                res = create_json_upload.delay(filepath, request.user.id)
             except CreateCustomerException as ce:
                 raise ce
 

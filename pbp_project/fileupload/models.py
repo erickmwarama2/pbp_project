@@ -5,6 +5,7 @@ import os
 import csv
 import uuid
 import json
+from django.contrib.auth.models import User
 
 
 class FileUploadModel(models.Model):
@@ -20,7 +21,7 @@ class FileUploadModel(models.Model):
         choices=UploadStatus.choices, default=UploadStatus.PENDING
     )
     processing_message = models.TextField(blank=True, null=True)
-    num_records = models.PositiveIntegerField()
+    num_records = models.PositiveIntegerField(default=0)
     start_date_time = models.DateTimeField(null=True)
     end_date_time = models.DateTimeField(null=True)
 
@@ -28,22 +29,10 @@ class FileUploadModel(models.Model):
     def filename(self):
         return os.path.basename(self.filename)
 
-    def create_from_stream(self, user, file=None, body=None):
-        if file is not None:
-            filepath = self.generate_filename()
-            self.filename = filepath
-
-            with open(filepath, "wb+") as dest:
-                for chunk in file.chunks():
-                    dest.write(chunk)
-        else:
-            filepath = "/tmp/upload_users.json"
-            self.filename = filepath
-            with open(filepath, "wb+") as dest:
-                for obj in body:
-                    dest.write(obj)
-
-        return FileUploadModel.objects.create(filepath=filepath, uploaded_by=user.id)
+    def create_file_upload_model(self, user_id, filepath):
+        return FileUploadModel.objects.create(
+            file_path=filepath, uploaded_by=User.objects.get(pk=user_id)
+        )
 
     def mark_processed(self, num_records):
         self.upload_status = self.UploadStatus.PROCESSED
@@ -63,7 +52,7 @@ class FileUploadModel(models.Model):
         num_records = 0
 
         try:
-            with open(self.filename, "rb") as f:
+            with open(self.file_path, "rb") as f:
                 decoded_file = json.load(f)
 
                 for row in decoded_file:
@@ -97,7 +86,7 @@ class FileUploadModel(models.Model):
         num_records = 0
 
         try:
-            with open(self.filename, "rb") as f:
+            with open(self.file_path, "rb") as f:
                 decoded_file = f.read().decode("utf-8").splitlines()
                 reader = csv.DictReader(decoded_file)
 

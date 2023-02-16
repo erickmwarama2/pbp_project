@@ -9,14 +9,16 @@ import csv
 
 
 @shared_task
-def create_file_upload(file, user):
-    fileupload = FileUploadModel.objects.create_from_stream(user, file)
-    process_fileupload.delay(fileupload.id)
+def create_file_upload(filepath, user_id):
+    fileupload_model = FileUploadModel()
+    fileupload = fileupload_model.create_file_upload_model(user_id, filepath)
+    return fileupload.id
 
 
 @shared_task
-def create_json_upload(body, user):
-    fileupload = FileUploadModel.objects.create(user, None, body)
+def create_json_upload(filepath, user_id):
+    fileupload_model = FileUploadModel()
+    fileupload = fileupload_model.create_file_upload_model(user_id, filepath)
     process_file_upload_json.delay(fileupload.id)
 
 
@@ -26,8 +28,9 @@ def process_file_upload_json(upload_id):
     upload.upload_json()
 
 
-@shared_task
-def process_fileupload(upload_id):
+@task_postrun.connect()
+def create_file_upload_success_handler(sender=None, state=None, **kwargs):
+    upload_id = kwargs.get("upload_id", 1)
     upload = FileUploadModel.objects.get(id=upload_id)
     upload.upload()
 
