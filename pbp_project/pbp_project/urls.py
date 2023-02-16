@@ -24,7 +24,6 @@ from drf_yasg import openapi
 router = routers.DefaultRouter()
 router.register(r"customers", UploadViewSet, basename="customers")
 
-# schema_view = get_swagger_view(title='Upload Customers API', url='/swagger-ui')
 schema_view = get_schema_view(
     openapi.Info(
         title="Upload Customers API",
