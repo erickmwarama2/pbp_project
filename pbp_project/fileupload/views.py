@@ -12,11 +12,16 @@ from .tasks import (
     create_json_upload,
 )
 from .models import CreateCustomerException, FileUploadException
+from rest_framework_swagger import renderers
 
 
 class UploadViewSet(ViewSet):
     serializer_class = UploadSerializer
     permission_classes = (IsAuthenticated,)
+    # renderer_classes = [
+    #     renderers.OpenAPIRenderer,
+    #     renderers.SwaggerUIRenderer
+    # ]
 
     def list(self, request):
         first_name = request.query_params.get("first_name", None)

@@ -16,9 +16,30 @@ Including another URLconf
 from django.contrib import admin
 from fileupload.views import UploadViewSet
 from django.urls import path, include
-from rest_framework import routers
+from rest_framework import routers, permissions
+from django.views.generic import TemplateView
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
 
 router = routers.DefaultRouter()
 router.register(r"customers", UploadViewSet, basename="customers")
 
-urlpatterns = [path("admin/", admin.site.urls), path("", include(router.urls))]
+# schema_view = get_swagger_view(title='Upload Customers API', url='/swagger-ui')
+schema_view = get_schema_view(
+    openapi.Info(
+        title="Upload Customers API",
+        default_version="v1",
+    ),
+    public=True,
+    permission_classes=[permissions.AllowAny],
+)
+
+urlpatterns = [
+    path(
+        "swagger-ui/",
+        schema_view.with_ui("swagger", cache_timeout=0),
+        name="swagger-ui",
+    ),
+    path("admin/", admin.site.urls),
+    path("", include(router.urls)),
+]
