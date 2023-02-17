@@ -1,5 +1,5 @@
 from .models import Customer, FileUploadModel
-from celery import shared_task
+from celery import shared_task, signals
 from celery.signals import task_postrun
 from django.core.serializers import serialize
 from .serializers import CustomerSerializer
@@ -8,18 +8,26 @@ from .models import CreateCustomerException, FileUploadException
 import csv
 
 
-@shared_task
+@signals.worker_init.connect
+def on_worker_init(sender, **kwargs):
+    signals.task_postrun.connect(create_file_upload_success_handler, sender=None)
+    signals.task_postrun.connect(create_json_upload_success_handler, sender=None)
+
+
+@shared_task(name="create_file_upload", ignore_result=False)
 def create_file_upload(filepath, user_id):
     fileupload_model = FileUploadModel()
     fileupload = fileupload_model.create_file_upload_model(user_id, filepath)
+    # res = task_postrun.send(retval=fileupload.id, sender=create_file_upload)
     return fileupload.id
 
 
-@shared_task
+@shared_task(name="create_json_upload", ignore_result=False)
 def create_json_upload(filepath, user_id):
     fileupload_model = FileUploadModel()
     fileupload = fileupload_model.create_file_upload_model(user_id, filepath)
-    process_file_upload_json.delay(fileupload.id)
+    # res = task_postrun.send(retval=fileupload.id, sender=create_file_upload)
+    return fileupload.id
 
 
 @shared_task
@@ -28,8 +36,15 @@ def process_file_upload_json(upload_id):
     upload.upload_json()
 
 
+@task_postrun.connect(sender=create_file_upload)
+def create_file_upload_success_handler(sender=None, **kwargs):
+    upload_id = kwargs.get("upload_id", 1)
+    upload = FileUploadModel.objects.get(id=upload_id)
+    upload.upload()
+
+
 @task_postrun.connect()
-def create_file_upload_success_handler(sender=None, state=None, **kwargs):
+def create_json_upload_success_handler(sender=None, **kwargs):
     upload_id = kwargs.get("upload_id", 1)
     upload = FileUploadModel.objects.get(id=upload_id)
     upload.upload()
